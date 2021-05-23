@@ -21,9 +21,10 @@ class BallTreeNode:
 
 
 class BallTree:
-    def __init__(self, leaf_size=40, metric=distances.euclidean_distance, **kwargs):
+    def __init__(self, leaf_size=40, metric='euclidean'):
         self.leaf_size = leaf_size
-        self.metric = metric
+        if metric == 'euclidean':
+            self.metric = distances.euclidean_distance
         self.root = None
 
     def fit(self, X, y=None):
@@ -61,20 +62,22 @@ class BallTree:
 
         return centroid, left_X, left_y, right_X, right_y
 
-    def query(self, x, k=1, return_distance=False):
+    def query(self, X, k=1, return_distance=False):
+        knns = (self._query(x, k, return_distance) for x in X)
+        idxs = np.array([knn[0] for knn in knns], dtype=np.int32)
+        if not return_distance:
+            return idxs
+        dists = np.array([knn[1] for knn in knns])
+        return idxs, dists
+
+    def _query(self, x, k, return_distance=False):
         pq = PriorityQueue(capacity=k, order='min')
-    
         pq = self._knn(x, k, pq, self.root)
-        
-        k_nearests = []
-        nearests = pq
-        for n in nearests:
-            point, _ = n
-            if return_distance:
-                k_nearests.append((n, self.metric(point, x)))
-            else:
-                k_nearests.append(n)
-        return k_nearests
+        idx = min(len(pq) - 1, k - 1)
+        if not return_distance:
+            return idx
+        z = pq[idx]
+        return (idx, self.metric(z, x))
             
     def _knn(self, x, k, pq, root):
         dist_to_ball_centroid = self.metric(x, root.centroid)
