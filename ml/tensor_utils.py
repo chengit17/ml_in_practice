@@ -55,7 +55,7 @@ def check_square_matrix(X):
 def check_X_and_y(X, y):
     X, y = np.asarray(X), np.asarray(y)
 
-    y = make_1darray(y)
+    y = check_1darray(y)
     check_consistent_length(X, y)
 
     return X, y
