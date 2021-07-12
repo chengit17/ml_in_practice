@@ -1,13 +1,17 @@
 import numpy as np
-from . import tensor_utils
+from scipy import linalg
+
+from ml.utils.data_check import is_1darray
+from ml.utils.data_check import check_X
+from ml.utils.data_check import check_square_matrix
 
 
 class Kernel:
-    def __call__(self, X, Y):
-        return self.transform(X, Y)
-
     def transform(self, X, Y):
         raise NotImplementedError
+
+    def __call__(self, X, Y):
+        return self.transform(X, Y)
 
 
 class LinearKernel(Kernel):
@@ -60,25 +64,29 @@ class GaussianKernel(Kernel):
 
 
 class MultiVariateGaussianKernel(Kernel):
+    """多元高斯核
+    """
+    
     def __init__(self, Sigma):
-        self.Sigma = tensor_utils.check_square_matrix(Sigma)
+        self.Sigma = check_square_matrix(Sigma)
         self.feature_dim = self.Sigma.shape[0]
 
     def transform(self, X, Y):
-        X = tensor_utils.check_2darray(X)
+        X = check_X(X)
         return self._compute_multivariate_kernel(X, Y, self.Sigma)
 
-    def _compute_multivariate_kernel(self, X, covariance):
+    def _compute_multivariate_kernel(self, X, Y, covariance):
         n_samples, n_features = X.shape
         covar_chol = linalg.cholesky(covariance, lower=True)
         precision_chol = linalg.solve_triangular(covar_chol, np.eye(n_features), lower=True).T
                 
-        matrix_chol_diag = matrix_chol.ravel()[:, ::(n_features + 1)]
-        log_det = np.sum(np.log(matrix_chol_diag), axis=1)
+        covar_chol_diag = covar_chol.ravel()[:, ::(n_features + 1)]
+        log_det = np.sum(np.log(covar_chol_diag), axis=1)
 
         z = (X - Y) @ precision_chol
         log_prob = -.5 * (n_features * np.log(2 * np.pi) + np.sum(np.square(z), axis=1)) + log_det
-        return np.exp(log_prob)
+        prob = np.exp(log_prob)
+        return prob
 
 
 class LaplaceKernel(Kernel):
@@ -123,4 +131,4 @@ class CombinedKernel(Kernel):
         self.func = func
 
     def transform(self, X, Y):
-        return func(X) * self.kernel(X, Y) * func(Y)
+        return self.func(X) * self.kernel(X, Y) * self.func(Y)

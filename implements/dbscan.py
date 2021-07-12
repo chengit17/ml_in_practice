@@ -1,7 +1,6 @@
-import copy
 import numpy as np
 from queue import Queue
-from ml.metrics import distances
+from ml import metrics
 
 
 class DBSCAN:
@@ -10,7 +9,7 @@ class DBSCAN:
         self.neighbor_min_size = neighbor_min_size
 
         if metric == 'euclid':
-            self.metric = distances.euclidean_distance
+            self.metric = metrics.euclidean_distance
 
         self._clusters = []
 
@@ -19,7 +18,7 @@ class DBSCAN:
 
         centroids = self._init_centroids(X, self.neighbors)
 
-        unaccess = np.ones((len(X,), dtype=np.bool)
+        unaccess = np.ones((len(X),), dtype=np.bool)
         while not len(centroids):
             copied_unaccess = unaccess.copy()
             queue = Queue()

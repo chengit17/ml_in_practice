@@ -1,31 +1,7 @@
 import itertools
 import numpy as np
-
-
-def check_X(X):
-    X = np.asarray(X)
-    if len(X.shape) == 1:
-        X = X[:, np.newaxis]
-    return X
-
-def check_y(y):
-    y = np.asarray(y)
-    if len(y.shape) == 1:
-        y = y[:, np.newaxis]
-    return y
-
-
-def check_consistent_length(*arrays):
-    lengths = [len(array) for array in arrays]
-    uniques = np.unique(lengths)
-    if len(uniques) > 1:
-        raise ValueError('X and y should has the same length!')
-
-
-def check_X_and_y(X, y):
-    X, y = check_X(X), check_y(y)
-    check_consistent_length(X, y)
-    return X, y
+from ml.utils.data_check import check_X_and_y
+from ml.utils.data_check import check_X
 
 
 class LinearRegression:
@@ -35,7 +11,7 @@ class LinearRegression:
 
     def fit(self, X, y):
         X, y = check_X_and_y(X, y)
-        n_samples, n_features = X.shape
+        n_samples, _ = X.shape
         I = np.ones((n_samples, 1))
         X = np.hstack([I, X])
         W = np.linalg.inv(X.T @ X) @ X.T @ y  # ((d, n) @ (n, d))^-1 @ (d, n) @ (n, 1) -> (d, 1)

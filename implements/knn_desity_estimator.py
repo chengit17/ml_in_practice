@@ -1,7 +1,10 @@
 import numpy as np
+from scipy import linalg
 from sklearn.neighbors import BallTree
-from ml.kernels import GaussianKernel
-from ml import tensor_utils
+
+from ml.utils.data_check import check_X
+from ml.utils.data_check import check_square_matrix
+from ml.utils.data_check import is_multivariate_data
 
 
 class Kernel:
@@ -33,20 +36,20 @@ class MultiVariateGaussianKernel(Kernel):
     """多元高斯核
     """
     def __init__(self, Sigma):
-        self.Sigma = tensor_utils.check_square_matrix(Sigma)
+        self.Sigma = check_square_matrix(Sigma)
         self.feature_dim = self.Sigma.shape[0]
 
     def transform(self, X):
-        X = tensor_utils.check_2darray(X)
+        X = check_X(X)
         return self._compute_multivariate_kernel(X, self.Sigma)
 
     def _compute_multivariate_kernel(self, X, covariance):
-        n_samples, n_features = X.shape
+        _, n_features = X.shape
         covar_chol = linalg.cholesky(covariance, lower=True)
         precision_chol = linalg.solve_triangular(covar_chol, np.eye(n_features), lower=True).T
                 
-        matrix_chol_diag = matrix_chol.ravel()[:, ::(n_features + 1)]
-        log_det = np.sum(np.log(matrix_chol_diag), axis=1)
+        covar_chol_diag = covar_chol.ravel()[:, ::(n_features + 1)]
+        log_det = np.sum(np.log(covar_chol_diag), axis=1)
 
         z = X @ precision_chol
         log_prob = -.5 * (n_features * np.log(2 * np.pi) + np.sum(np.square(z), axis=1)) + log_det
@@ -57,15 +60,17 @@ class MultiVariateGaussianKernel(Kernel):
 class KnnDensity:
     """基于Knn的密度估计.
 
+    实现细节：
     1. 因为Knn密度是不连续的，而且它的积分为无穷大，而非１. 因此不能表示为概率密度函数. 
-       这里的实现在knn基础上加入了高斯核函数，可以得到更光滑的密度估计表示.
+       这里的实现在Knn基础上加入了高斯核，能够得到更光滑的密度估计.
 
-    2. 该算法涉及到两个距离度量: 1. 核函数; 2. K最近邻搜索
-       对于高维数据，如果数据的维度具有不同的尺度，应该将其规范化，使其具有一样的方差。如果直接使用欧式距离，无法做到在各维度上尺度一致。
-       因此这里对多维数据支持了马氏距离: 1. 在BallTree中使用了马氏距离度量而非欧式距离. 2. 使用了多维高斯核函数（用样本协方差进行归一化）
+    2. 该算法涉及到两个距离度量: a. 核函数; b. k近邻搜索
+
+        对于K近邻搜索，为了处理高维数据，使用了BallTree进行优化。
+        各维度尺度不一致对多维数据的距离度有很大的影响。鉴于欧式距离无法做到在各维度上尺度一致，在数据具有多个维度时，建议指定度量方法为马氏距离（默认为欧式距离）。
        
-       记住: 当实例化`KnnDensity`时，给定的`metric`参数为`mahalanobis`, fit数据时应输入多维数据，
-            如果输入的数据为一维数组，则会报错`RuntimeError`.
+    记住: 
+    1. 在实例化`KnnDensity`时，如果给定的`metric`参数为`mahalanobis`, fit的数据应该具有多维度.
     """
     def __init__(self, k=5, metric='euclidean', leaf_size=40):
         self.k = k
@@ -75,13 +80,13 @@ class KnnDensity:
     def fit(self, X, y=None):
         bt_kwargs = {}
         bt_kwargs['metric'] = self.metric
-        if tensor_utils.is_1darray(X):
-            if self.metric is 'mahalanobis':
+        if not is_multivariate_data(X):
+            if self.metric == 'mahalanobis':
                 raise RuntimeError('X must be at least two-dimensional')
         else:
             covar = np.cov(X, rowvar=False)
             self._train_samples_covar = covar
-            if self.metric is 'mahalanobis':
+            if self.metric == 'mahalanobis':
                 bt_kwargs['V'] = covar
         bt_kwargs['leaf_size'] = self.leaf_size
         self._ball_tree = BallTree(X, **bt_kwargs)
@@ -92,7 +97,7 @@ class KnnDensity:
         dists, idxs = self._ball_tree.query(X, k=self.k, return_distance=True)
         knn_dists = dists[:, -1] # (len(X),)
         
-        if tensor_utils.is_1darray(self._train_samples):
+        if not is_multivariate_data(self._train_samples):
             kernel = GaussianKernel(sigma=1.)
         else:
             kernel = MultiVariateGaussianKernel(Sigma=self._train_samples_covar)
@@ -106,7 +111,11 @@ class KnnDensity:
         return (1.0 / (N * knn_dists) * sum_projected_vals).flatten()
 
 
-if __name__ == '__main__':
+def test_sinlge_variate_data():
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     def make_data(N, f=0.3, rseed=1):
         rand = np.random.RandomState(rseed)
         x = rand.randn(N)
@@ -120,9 +129,10 @@ if __name__ == '__main__':
     x_d = np.linspace(-20, 20, 1000)
     probs = kd.score_samples(x_d[:, np.newaxis])
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import seaborn as sns
     sns.set()
     plt.fill_between(x_d, probs, alpha=0.5)
     plt.show()
+
+
+if __name__ == '__main__':
+    test_sinlge_variate_data()

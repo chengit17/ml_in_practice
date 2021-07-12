@@ -1,12 +1,11 @@
 import random
+import scipy as sp
 import numpy as np
-import scipy as sci
 from scipy import linalg
 
 from sklearn.cluster import KMeans
 
-
-logsumexp = sci.special.logsumexp
+logsumexp = sp.special.logsumexp
 
 
 def _check_X(X, n_features=None, n_clusters=None):
@@ -211,7 +210,7 @@ def _estimate_gaussian_covariances(X, resp, nk, means, reg_covar=1e-6, covarianc
         avg_mean2 = np.dot(nk * means.T, means)
         covariance = avg_X2 - avg_mean2
         covariance /= nk.sum()
-        covariance.flat[(::n_features+1)] += reg_covar
+        covariance.flat[::n_features+1] += reg_covar
         return covariance
     elif covariance_type == 'diag':
         avg_X2 = np.dot(resp.T, X ** 2) / nk[:, np.newaxis]

@@ -1,7 +1,7 @@
 import numpy as np
 
+from ml import metrics
 from ml.structures.priority_queue import PriorityQueue
-from ml.metrics import distances
 
 
 class BallTreeNode:
@@ -24,7 +24,7 @@ class BallTree:
     def __init__(self, leaf_size=40, metric='euclidean'):
         self.leaf_size = leaf_size
         if metric == 'euclidean':
-            self.metric = distances.euclidean_distance
+            self.metric = metrics.euclidean_distance
         self.root = None
 
     def fit(self, X, y=None):

@@ -10,7 +10,7 @@ class BaseNode:
 
 class LeafNode(BaseNode):
     def __init__(self):
-    self.label = None
+        self.label = None
 
 
 class DiscreteAttrNode(BaseNode):
