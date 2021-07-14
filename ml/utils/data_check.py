@@ -61,7 +61,7 @@ def check_X_and_y(X, y, feature_row=True, same_dims=False):
     y = np.asarray(y)
 
     if feature_row:
-        assert 0 < X.ndim < 2
+        assert X.ndim in (1, 2)
         if X.ndim == 1:
             X = X[:, np.newaxis]
 

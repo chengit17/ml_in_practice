@@ -5,22 +5,22 @@ from ml.utils.data_check import check_X
 
 
 class LinearRegression:
-    def __init__(self):
+    def __init__(self, eps=1e-5):
         self.coefficients = None
         self.iterpret = None
+        self.eps = eps
 
     def fit(self, X, y):
         X, y = check_X_and_y(X, y)
         n_samples, _ = X.shape
         I = np.ones((n_samples, 1))
         X = np.hstack([I, X])
-        W = np.linalg.inv(X.T @ X) @ X.T @ y  # ((d, n) @ (n, d))^-1 @ (d, n) @ (n, 1) -> (d, 1)
+        W = np.linalg.inv(X.T @ X + self.eps) @ X.T @ y  # ((d, n) @ (n, d))^-1 @ (d, n) @ (n, 1) -> (d, 1)
         self.coefficients = W[1:]
         self.intercept = W[0]
 
     def predict(self, X):
         X = check_X(X)
-        n_samples, n_features = X.shape
         return np.ravel(X @ self.coefficients + self.intercept) # (n,)
 
 

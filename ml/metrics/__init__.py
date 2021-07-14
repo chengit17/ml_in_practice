@@ -9,3 +9,8 @@ from .vector_pairwised import euclidean_distances
 from .vector_pairwised import cosine_distances
 
 from .distribution import mahalanobis_distance
+
+from .matrix import mae
+from .matrix import mse
+from .matrix import rmse
+from .matrix import rmae
